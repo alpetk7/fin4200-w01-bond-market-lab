@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -I -c ' *)",
+      "Bash(python -m streamlit --version)",
+      "Bash(timeout 25 python -m streamlit run app-bond-lab.py --server.headless true --server.port 8599)",
+      "Bash(cp __TRACKED_VAR__/bond_data.new.csv temp/bond_data.csv)",
+      "Bash(git add *)",
+      "Bash(git commit -q -m 'Add Streamlit bond market app with agency/non-agency MBS split *)",
+      "Bash(git push *)"
+    ]
+  }
+}
