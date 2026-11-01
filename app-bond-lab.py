@@ -1,5 +1,6 @@
 from pathlib import Path
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 
 st.set_page_config(
@@ -71,6 +72,33 @@ QUESTIONS = {
             "How did the recession, TARP, and the collapse "
             "of securitization markets affect these trends?"
         ),
+        "background_title": "Background: TARP",
+        "background": (
+            "The **Troubled Asset Relief Program (TARP)** was created by "
+            "the Emergency Economic Stabilization Act, signed October 3, "
+            "2008, at the height of the financial crisis. Congress "
+            "authorized up to $700 billion (later cut to about $475 "
+            "billion) for the Treasury to stabilize the financial "
+            "system. About $440 billion was actually disbursed, mainly to:\n\n"
+            "- **Banks**, through preferred-stock purchases that "
+            "injected capital (the Capital Purchase Program, about "
+            "$205 billion)\n"
+            "- **AIG**, the insurer that had sold credit protection on "
+            "mortgage securities\n"
+            "- **Automakers** GM and Chrysler and their finance arms\n"
+            "- **Mortgage relief and credit markets**, including support "
+            "for securitization of consumer and small-business loans\n\n"
+            "TARP itself explains only a small part of the growth in "
+            "Treasury debt, because most of the money was repaid with "
+            "returns and the final cost was a few tens of billions of "
+            "dollars. The larger drivers were the deep recession, which "
+            "cut tax revenue, the 2009 fiscal stimulus (ARRA, about "
+            "$800 billion), and the Federal Reserve's bond purchases "
+            "alongside strong investor demand for safe assets. "
+            "Compare the Treasury line with the Mortgage Related and "
+            "Asset-Backed lines to see how private securitization "
+            "shrank while government borrowing grew."
+        ),
     },
 
     "Q3: Mortgage-Backed Securities": {
@@ -100,6 +128,26 @@ QUESTIONS = {
             "Would government borrowing have been different "
             "if interest rates were 4-5% instead of near zero?"
         ),
+        "background_title": "Background: the CARES Act",
+        "background": (
+            "The **Coronavirus Aid, Relief, and Economic Security "
+            "(CARES) Act**, signed March 27, 2020, was the first and "
+            "largest US pandemic relief package, at about $2.2 trillion. "
+            "It funded:\n\n"
+            "- **Direct payments** of $1,200 per adult and $500 per "
+            "child for most households\n"
+            "- **Expanded unemployment insurance**, including an extra "
+            "$600 per week and coverage for gig workers\n"
+            "- **Paycheck Protection Program** forgivable loans to small "
+            "businesses that kept workers on payroll\n"
+            "- **Loans and aid** for airlines, hospitals, and state and "
+            "local governments\n\n"
+            "The spending was financed by borrowing, not new taxes, so "
+            "the Treasury sold much more debt (largely short-term "
+            "T-bills). At the same time tax revenue fell in the "
+            "recession, and the Federal Reserve cut rates to near zero "
+            "and bought Treasuries."
+        ),
     },
 
     "Explore All Years": {
@@ -117,6 +165,28 @@ QUESTIONS = {
             "Which market segments grew most rapidly?"
         ),
     },
+}
+
+# ---------------------------------------------------
+# CHART CONTEXT: RECESSIONS AND KEY EVENTS
+# ---------------------------------------------------
+
+# NBER recession years (annual data, so shaded by calendar year)
+RECESSIONS = [
+    (1980, 1980), (1981, 1982), (1990, 1991),
+    (2001, 2001), (2008, 2009), (2020, 2020),
+]
+
+EVENTS = [
+    (2001, "Tax cuts"),
+    (2008, "TARP"),
+    (2020, "CARES Act"),
+]
+
+Y_AXIS_TITLES = {
+    "Outstanding Balances": "$ trillions",
+    "Market Shares": "% of total market",
+    "Indexed Growth": "Index (first year = 100)",
 }
 
 # ---------------------------------------------------
@@ -229,11 +299,63 @@ with tab1:
         ]
 
         if plotted:
-            st.line_chart(
-                chart_data.set_index("Year")[plotted],
-                height=400,
-                use_container_width=True
+            show_events = st.checkbox(
+                "Show recessions and key events",
+                value=True
             )
+
+            fig = go.Figure()
+
+            for category in plotted:
+                fig.add_trace(go.Scatter(
+                    x=chart_data["Year"],
+                    y=chart_data[category],
+                    name=category,
+                    mode="lines",
+                    hovertemplate="%{y:,.2f}"
+                ))
+
+            if show_events:
+                for start_year, end_year in RECESSIONS:
+                    if end_year >= years[0] and start_year <= years[1]:
+                        fig.add_vrect(
+                            x0=start_year - 0.5,
+                            x1=end_year + 0.5,
+                            fillcolor="gray",
+                            opacity=0.15,
+                            line_width=0
+                        )
+
+                for event_year, label in EVENTS:
+                    if years[0] <= event_year <= years[1]:
+                        fig.add_vline(
+                            x=event_year,
+                            line_dash="dot",
+                            line_color="gray",
+                            annotation_text=label,
+                            annotation_position="top left"
+                        )
+
+            fig.update_layout(
+                height=420,
+                hovermode="x unified",
+                xaxis_title="Year",
+                yaxis_title=Y_AXIS_TITLES[chart_type],
+                legend=dict(
+                    orientation="h",
+                    yanchor="top",
+                    y=-0.2
+                ),
+                margin=dict(l=10, r=10, t=30, b=10)
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+            if show_events:
+                st.caption(
+                    "Gray bands: NBER recessions. "
+                    "Dotted lines: key fiscal events."
+                )
         else:
             st.warning("No valid data available.")
 
@@ -318,6 +440,10 @@ with tab1:
 
     st.markdown("### Follow-up Discussion")
     st.write(case["followup"])
+
+    if "background" in case:
+        with st.expander(case["background_title"], expanded=True):
+            st.markdown(case["background"])
 
     with st.expander("View Underlying Data"):
         st.dataframe(
