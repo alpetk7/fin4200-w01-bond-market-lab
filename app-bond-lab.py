@@ -196,7 +196,7 @@ Y_AXIS_TITLES = {
 st.title("📈 US Bond Market Explorer")
 
 st.caption(
-    "FIN4200 | Applied Finance Lab | "
+    "FIN4200 Applied Finance Lab | University of Denver "
     "Historical US bond markets, 1980-2024"
 )
 
@@ -206,10 +206,62 @@ st.info(
     "not the same as annual issuance or trading volume."
 )
 
-tab1, tab2 = st.tabs([
+tab0, tab1, tab2 = st.tabs([
+    "🥧 Market Snapshot",
     "📊 Bond Market History",
     "💵 Interest Rate Simulator"
 ])
+
+# ---------------------------------------------------
+# TAB 0: MARKET SNAPSHOT
+# ---------------------------------------------------
+
+# Agency MBS and Non-Agency MBS are subsets of Mortgage Related,
+# so only the non-overlapping segments are shown.
+SEGMENTS = [m for m in MARKETS if m not in ["Agency MBS", "Non-Agency MBS"]]
+
+with tab0:
+
+    st.subheader("What Does the US Bond Market Look Like?")
+
+    snapshot_year = st.slider(
+        "Select Year",
+        min_value=int(df["Year"].min()),
+        max_value=int(df["Year"].max()),
+        value=int(df["Year"].max()),
+        key="snapshot_year"
+    )
+
+    row = df[df["Year"] == snapshot_year].iloc[0]
+
+    pie_data = row[SEGMENTS].dropna()
+
+    fig_pie = go.Figure(go.Pie(
+        labels=pie_data.index,
+        values=pie_data.values / 1000,
+        hole=0.45,
+        sort=False,
+        textinfo="label+percent",
+        hovertemplate="%{label}: $%{value:,.2f}T<extra></extra>"
+    ))
+
+    fig_pie.update_layout(
+        height=450,
+        showlegend=False,
+        margin=dict(l=10, r=10, t=10, b=10),
+        annotations=[dict(
+            text=f"<b>${row['Total'] / 1000:,.1f}T</b><br>{snapshot_year}",
+            showarrow=False,
+            font_size=18
+        )]
+    )
+
+    st.plotly_chart(fig_pie, use_container_width=True)
+
+    st.caption(
+        "Share of total US bond market securities outstanding. "
+        "Drag the slider to see how the mix has changed."
+    )
 
 # ---------------------------------------------------
 # TAB 1: HISTORICAL DATA
